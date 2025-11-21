@@ -18,4 +18,3 @@ The project is structured as follows:
 - **documentation** - Contains course-related documentation such as requirements and evidence.
 - **pyGame** - Contains all Python files used to construct the final product.
 
-adding entry to test git
