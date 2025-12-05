@@ -18,9 +18,10 @@ fps = 60
 black = (0, 0, 0)
 white = (255, 255, 255)
 
+# Define Classes
 class Entity:
     """Base class for sprite-based game entities (invaders, defenders, barriers)"""
-    def init(self, name, x, y, width, height):
+    def __init__(self, name, x, y, width, height):
         """Initialise common entity properties"""
         self.name = name
         self.x = x
@@ -41,9 +42,9 @@ class Entity:
 class Invader(Entity):
     """Class representing an invader"""
 
-    def init(self, name, x, y, spriteFile, laserColour, width=40, height=40):
+    def __init__(self, name, x, y, spriteFile, laserColour, width=40, height=40):
         """Initialise invader  with given properties"""
-        super().init(name, x, y, width, height)
+        super().__init__(name, x, y, width, height)
         self.laserColour = laserColour
 
         spritePath = os.path.join(gameDirectory, spriteFile)
@@ -53,10 +54,10 @@ class Invader(Entity):
 class Defender(Entity):
     """Class representing the defender"""
 
-    def init(self, name, x, y, spriteFile, width=60, speed=5):
+    def __init__(self, name, x, y, spriteFile, width=60, speed=5):
         """Initialise defender with given properties"""
         height = int(width * 76 / 90)
-        super().init(name, x, y, width, height)
+        super().__init__(name, x, y, width, height)
 
         self.speed = speed
         self.moveLeft = False
@@ -79,9 +80,9 @@ class Defender(Entity):
 class Barrier(Entity):
     """Class representing a barrier"""
 
-    def init(self, name, x, y, spriteFile, width=100, height= 24, maxHealth=3):
+    def __init__(self, name, x, y, spriteFile, width=100, height= 24, maxHealth=3):
         """Initialise barrier with given properties"""
-        super().init(name, x, y, width, height)
+        super().__init__(name, x, y, width, height)
 
         self.health = maxHealth
         self.maxHealth = maxHealth
@@ -121,7 +122,7 @@ class Barrier(Entity):
 class Laser:
     """Class representing a laser"""
 
-    def init(self, x, y, speed, colour, width=5, height=10):
+    def __init__(self, x, y, speed, colour, width=5, height=10):
         """Initialise laser with given properties"""
         self.x = x
         self.y = y
@@ -141,11 +142,73 @@ class Laser:
     def draw(self, screen):
         """Draw the laser on the screen"""
         pygame.draw.rect(screen, self.colour, (self.x, self.y, self.width, self.height))
-    
+
     def isOffScreen(self, displayHeight):
         """Check if the laser is off the screen"""
         return self.y < 0 or self.y > displayHeight
 
+#  Game Configuration
+
+score = 0
+font = pygame.font.Font(None, 36)
+
+# Defender types dictionary
+defenderTypes = {
+    "K9": {
+        "spriteFile": "assets/sprites/k9.png",
+        "speed": 5,
+        "height": 60,
+        "width": 60,
+    }
+}
+
+#  Invader types dictionary
+invaderTypes = {
+    "Dalek": { 
+        "spriteFile": "assets/sprites/dalek.png",
+        "laserColour": (255, 0, 0),
+        "width": 35, 
+        "height": 67
+        },
+    "Cyberman": {
+        "spriteFile": "assets/sprites/cyberman.png",
+        "laserColour": (255, 0, 0),
+        "width": 35, 
+        "height": 67
+        }
+}
+
+barrierTypes = {
+    "Barrier": {
+        "spriteFile": "assets/sprites/sonic.png",
+        "health": 3,
+        "width": 100,
+        "height": 24,
+    }
+}
+
+# Invader grid configuration
+invaderRows = 3
+invaderColumns = 10
+invaderSpacing = 65
+invaderStartX = 100
+invaderStartY = 50
+startInvaderSpeed = 1
+invaderDirection = 1 # 1 for right, -1 for left
+totalInvaders = invaderRows * invaderColumns
+
+# Barrier configuration
+barrierY = displayHeight - 200
+barrierSpacing = 180
+
+# Laser configuration
+defenderLaserSpeed = -7  # Negative = upward
+defenderLaserWidth = 5
+defenderLaserHeight = 10
+invaderLaserSpeed = 3  # Positive = downward
+invaderLaserWidth = 4
+invaderLaserHeight = 8
+invaderFireRate = 0.0010
 
 screen = pygame.display.set_mode((displayWidth, displayHeight))
 pygame.display.set_caption("Doctor Who Space Invasion")
