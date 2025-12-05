@@ -1,7 +1,19 @@
+"""
+Doctor Who Space Invasion Game
+
+A Space Invaders-style arcade game featuring Doctor Who characters.
+
+Uses Pygame for graphics and game logic.
+"""
+
 import pygame
 import sys
 import random
 import os
+
+# ============================================================================
+# INITIALISATION
+# ============================================================================
 
 # Initialise pygame
 pygame.init()
@@ -18,7 +30,9 @@ fps = 60
 black = (0, 0, 0)
 white = (255, 255, 255)
 
-# Define Classes
+# ============================================================================
+# CLASS DEFINITIONS
+# ============================================================================
 class Entity:
     """Base class for sprite-based game entities (invaders, defenders, barriers)"""
     def __init__(self, name, x, y, width, height):
@@ -147,7 +161,9 @@ class Laser:
         """Check if the laser is off the screen"""
         return self.y < 0 or self.y > displayHeight
 
-#  Game Configuration
+# ============================================================================
+# GAME CONFIGURATION
+# ============================================================================
 
 score = 0
 font = pygame.font.Font(None, 36)
@@ -164,16 +180,16 @@ defenderTypes = {
 
 #  Invader types dictionary
 invaderTypes = {
-    "Dalek": { 
+    "Dalek": {
         "spriteFile": "assets/sprites/dalek.png",
         "laserColour": (255, 0, 0),
-        "width": 35, 
+        "width": 35,
         "height": 67
         },
     "Cyberman": {
         "spriteFile": "assets/sprites/cyberman.png",
         "laserColour": (255, 0, 0),
-        "width": 35, 
+        "width": 35,
         "height": 67
         }
 }
@@ -210,6 +226,10 @@ invaderLaserWidth = 4
 invaderLaserHeight = 8
 invaderFireRate = 0.0010
 
+# ============================================================================
+# GAME OBJECT INITIALISATION
+# ============================================================================
+
 # Create player
 
 # Randomly select defender type from available types
@@ -218,7 +238,7 @@ defenderConfig = defenderTypes[chosenDefender]
 
 defender = Defender(
     name = chosenDefender,
-    x = displayWidth // 2 - defenderConfig["width"] // 2, # Center horizontally: screen center minus half sprite width
+    x = displayWidth // 2 - defenderConfig["width"] // 2, # Centre horizontally: screen centre minus half sprite width
     y = displayHeight - 80, # Position 80 pixels from bottom
     spriteFile = defenderConfig["spriteFile"],
     width = defenderConfig["width"],
@@ -283,7 +303,9 @@ for i in range(100):
         "brightness": starBrightness
     })
 
-#  Helper Functions
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
 
 def moveInvaders():
     """Move invaders horizontally, and when they reach the edge, move them down and reverse direction
@@ -310,6 +332,71 @@ def moveInvaders():
         for invader in invaders:
             invader.y += 10
         invaderDirection *= -1
+
+def checkDefenderLaserCollisions():
+    """Check for collisions between defender lasers and invaders/barriers"""
+    global score
+
+    for laser in defenderLasers:
+        for invader in invaders:
+            if laser.getRect().colliderect(invader.getRect()):
+                defenderLasers.remove(laser)
+                invaders.remove(invader)
+                score += 10
+                break
+
+    for laser in defenderLasers:
+        for barrier in barriers:
+            if laser.getRect().colliderect(barrier.getRect()):
+                defenderLasers.remove(laser)
+                barrier.takeDamage()
+                if barrier.isDestroyed():
+                    barriers.remove(barrier)
+                break
+
+def checkInvaderLaserCollisions():
+    """Check for collisions between invader lasers and defender/barriers"""
+    for laser in invaderLasers:
+        for barrier in barriers:
+            if laser.getRect().colliderect(barrier.getRect()):
+                invaderLasers.remove(laser)
+                barrier.takeDamage()
+                if barrier.isDestroyed():
+                    barriers.remove(barrier)
+                break
+
+    for laser in invaderLasers:
+        if laser.getRect().colliderect(defender.getRect()):
+            return "defender hit"
+
+    return None
+
+def checkInvaderCollisions():
+    """Check for collisions between invaders and defender/barriers"""
+    for invader in invaders:
+        for barrier in barriers:
+            if invader.getRect().colliderect(barrier.getRect()):
+                invaders.remove(invader)
+                barrier.takeDamage()
+                if barrier.isDestroyed():
+                    barriers.remove(barrier)
+                break
+
+    for invader in invaders:
+        if invader.getRect().colliderect(defender.getRect()):
+            return "defender hit"
+
+    return None
+
+def checkVictory():
+    """Check if the player has won"""
+    if len(invaders) == 0:
+        return True
+    return False
+
+# ============================================================================
+# MAIN GAME LOOP
+# ============================================================================
 
 screen = pygame.display.set_mode((displayWidth, displayHeight))
 pygame.display.set_caption("Doctor Who Space Invasion")
