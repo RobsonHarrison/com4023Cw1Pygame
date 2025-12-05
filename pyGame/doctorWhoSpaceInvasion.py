@@ -62,7 +62,7 @@ class Invader(Entity):
     they reach the edge. They fire lasers downward at random intervals.
     """
 
-    def __init__(self, name, x, y, spriteFile, laserColour, laserSpeed, laserWidth, laserHeight, width=40, height=40):
+    def __init__(self, name, x, y, spriteFile, laserColour, laserSpeed, laserWidth, laserHeight, scoreValue, width=40, height=40):
         """Initialise invader with given properties
 
         Args:
@@ -74,6 +74,7 @@ class Invader(Entity):
             laserSpeed: Speed of laser (positive = downward)
             laserWidth: Width of laser in pixels
             laserHeight: Height of laser in pixels
+            scoreValue: Points awarded for destroying this invader
             width: Width of invader sprite (default: 40)
             height: Height of invader sprite (default: 40)
         """
@@ -82,6 +83,7 @@ class Invader(Entity):
         self.laserSpeed = laserSpeed
         self.laserWidth = laserWidth
         self.laserHeight = laserHeight
+        self.scoreValue = scoreValue
 
         spritePath = os.path.join(gameDirectory, spriteFile)
         sprite = pygame.image.load(spritePath)
@@ -272,8 +274,9 @@ class Laser:
 # GAME CONFIGURATION
 # ============================================================================
 
-# Score tracking
+# Score and lives tracking
 score = 0
+lives = 3  # Number of lives the player starts with
 font = pygame.font.Font(None, 36)
 
 # Defender types dictionary - defines properties for each defender type
@@ -299,7 +302,8 @@ invaderTypes = {
         "laserColour": (255, 0, 0),
         "laserSpeed": 3,  # Positive = downward
         "laserWidth": 4,
-        "laserHeight": 8
+        "laserHeight": 8,
+        "scoreValue": 15
         },
     "Cyberman": {
         "spriteFile": "assets/sprites/cyberman.png",
@@ -308,7 +312,18 @@ invaderTypes = {
         "laserColour": (0, 0, 255),
         "laserSpeed": 3,  # Positive = downward
         "laserWidth": 4,
-        "laserHeight": 8
+        "laserHeight": 8,
+        "scoreValue": 5
+        },
+    "WeepingAngel": {
+        "spriteFile": "assets/sprites/weepingAngel.png",
+        "width": 35,
+        "height": 67,
+        "laserColour": (128, 0, 128),
+        "laserSpeed": 3,  # Positive = downward
+        "laserWidth": 4,
+        "laserHeight": 8,
+        "scoreValue": 25
         }
 }
 
@@ -384,6 +399,7 @@ for row in range(invaderRows):
             laserSpeed = invaderConfig["laserSpeed"],
             laserWidth = invaderConfig["laserWidth"],
             laserHeight = invaderConfig["laserHeight"],
+            scoreValue = invaderConfig["scoreValue"],
             width = invaderConfig["width"],
             height = invaderConfig["height"]
         )
@@ -430,7 +446,7 @@ for i in range(100):
 def moveInvaders():
     """Move invaders horizontally, and when they reach the edge, move them down and reverse direction
 
-    Speed increases as invaders are destroyed (up to a maximum of 5x) to maintain
+    Speed increases as invaders are destroyed (up to a maximum of 3x) to maintain
     game difficulty as the player progresses.
     """
     global invaderDirection
@@ -439,7 +455,7 @@ def moveInvaders():
     remainingInvaders = len(invaders)
     if remainingInvaders > 0:
         speedMultiplier = totalInvaders / remainingInvaders
-        currentSpeed = min(startInvaderSpeed * speedMultiplier, startInvaderSpeed * 5)
+        currentSpeed = min(startInvaderSpeed * speedMultiplier, startInvaderSpeed * 3)
     else:
         currentSpeed = startInvaderSpeed
 
@@ -471,8 +487,8 @@ def checkDefenderLaserCollisions():
         for invader in invaders:
             if laser.getRect().colliderect(invader.getRect()):
                 defenderLasers.remove(laser)
+                score += invader.scoreValue  # Award points based on invader type
                 invaders.remove(invader)
-                score += 10  # Award points for destroying invader
                 break
 
     # Check for laser-barrier collisions
@@ -542,6 +558,22 @@ def checkVictory():
     if len(invaders) == 0:
         return True
     return False
+
+def respawnDefender():
+    """Respawn the defender at the starting position and clear all lasers
+
+    Called when the defender is hit. Resets defender position and clears
+    all active lasers from the screen.
+    """
+    global defender, defenderLasers, invaderLasers
+
+    # Reset defender position to centre bottom
+    defender.x = displayWidth // 2 - defender.width // 2
+    defender.y = displayHeight - defender.height - 20
+
+    # Clear all lasers from screen
+    defenderLasers.clear()
+    invaderLasers.clear()
 
 # ============================================================================
 # MAIN GAME LOOP
@@ -638,18 +670,28 @@ while running:
     # Collision detection
     checkDefenderLaserCollisions()
 
-    # Check if defender was hit by invader laser (game over)
+    # Check if defender was hit by invader laser
     laserResult = checkInvaderLaserCollisions()
     if laserResult == "defender hit":
-        print("Defender hit by invader laser!")
-        running = False
+        lives -= 1
+        print(f"Defender hit by invader laser! Lives remaining: {lives}")
+        if lives > 0:
+            respawnDefender()
+        else:
+            print(f"Game Over! Final Score: {score}")
+            running = False
         continue
 
-    # Check if defender was hit by invader (game over)
+    # Check if defender was hit by invader
     invaderResult = checkInvaderCollisions()
     if invaderResult == "defender hit":
-        print("Defender hit by invader!")
-        running = False
+        lives -= 1
+        print(f"Defender hit by invader! Lives remaining: {lives}")
+        if lives > 0:
+            respawnDefender()
+        else:
+            print(f"Game Over! Final Score: {score}")
+            running = False
         continue
 
     # Check for victory condition
@@ -681,9 +723,12 @@ while running:
     for barrier in barriers:
         barrier.draw(screen)
 
-    # Draw score
+    # Draw score and lives
     scoreText = font.render(f"Score: {score}", True, white)
     screen.blit(scoreText, (10, 10))
+
+    livesText = font.render(f"Lives: {lives}", True, white)
+    screen.blit(livesText, (displayWidth - 150, 10))
 
     # Update display and maintain frame rate
     pygame.display.flip()
