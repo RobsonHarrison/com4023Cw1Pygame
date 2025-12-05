@@ -283,6 +283,34 @@ for i in range(100):
         "brightness": starBrightness
     })
 
+#  Helper Functions
+
+def moveInvaders():
+    """Move invaders horizontally, and when they reach the edge, move them down and reverse direction
+    Speed increases as invaders are destroyed (up to a maximum of 5x)
+    """
+    global invaderDirection
+
+    remainingInvaders = len(invaders)
+    if remainingInvaders > 0:
+        speedMultiplier = totalInvaders / remainingInvaders
+        currentSpeed = min(startInvaderSpeed * speedMultiplier,startInvaderSpeed * 5)
+    else:
+        currentSpeed = startInvaderSpeed
+
+    reachedEdge = False
+    for invader in invaders:
+        invader.x += currentSpeed * invaderDirection
+
+        # Check if this invader reached the edge
+        if invader.x <= 0 or invader.x >= displayWidth - invader.width:
+            reachedEdge = True
+
+    if reachedEdge:
+        for invader in invaders:
+            invader.y += 10
+        invaderDirection *= -1
+
 screen = pygame.display.set_mode((displayWidth, displayHeight))
 pygame.display.set_caption("Doctor Who Space Invasion")
 clock = pygame.time.Clock()
