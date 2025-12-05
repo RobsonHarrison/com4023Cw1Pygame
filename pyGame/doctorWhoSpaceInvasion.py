@@ -210,6 +210,79 @@ invaderLaserWidth = 4
 invaderLaserHeight = 8
 invaderFireRate = 0.0010
 
+# Create player
+
+# Randomly select defender type from available types
+chosenDefender = random.choice(list(defenderTypes.keys()))
+defenderConfig = defenderTypes[chosenDefender]
+
+defender = Defender(
+    name = chosenDefender,
+    x = displayWidth // 2 - defenderConfig["width"] // 2, # Center horizontally: screen center minus half sprite width
+    y = displayHeight - 80, # Position 80 pixels from bottom
+    spriteFile = defenderConfig["spriteFile"],
+    width = defenderConfig["width"],
+    speed = defenderConfig["speed"]
+)
+
+defenderLasers = []
+
+# Create grid of invaders
+invaders = []
+for row in range(invaderRows):
+    for column in range(invaderColumns):
+        # Calculate position in grid
+        invaderX = invaderStartX + (column * invaderSpacing)
+        invaderY = invaderStartY + (row * 80)  # 80px vertical spacing between rows
+
+        chosenInvader = random.choice(list(invaderTypes.keys()))
+        invaderConfig = invaderTypes[chosenInvader]
+
+        invader = Invader(
+            name = chosenInvader,
+            x = invaderX,
+            y = invaderY,
+            spriteFile = invaderConfig["spriteFile"],
+            laserColour = invaderConfig["laserColour"],
+            width = invaderConfig["width"],
+            height = invaderConfig["height"]
+        )
+        invaders.append(invader)
+
+invaderLasers = []
+
+# Create 4 evenly-spaced barriers across the screen
+barriers = []
+for i in range(4):
+    chosenBarrier = random.choice(list(barrierTypes.keys()))
+    barrierConfig = barrierTypes[chosenBarrier]
+
+    barrierX = 100 + (i * barrierSpacing)  # Start at x=100, space by 180px
+    barrier = Barrier(
+        name = chosenBarrier,
+        x = barrierX,
+        y = barrierY,
+        spriteFile = barrierConfig["spriteFile"],
+        width = barrierConfig["width"],
+        height = barrierConfig["height"],
+        maxHealth = barrierConfig["health"]
+    )
+    barriers.append(barrier)
+
+# Create starfield background
+backgroundStars = []
+for i in range(100):
+    starX = random.randint(0, displayWidth)
+    starY = random.randint(0, displayHeight)
+    starSize = random.randint(1, 3)
+    starBrightness = random.randint(100, 255)
+    backgroundStars.append({
+        "x": starX,
+        "y": starY,
+        "size": starSize,
+        "brightness": starBrightness
+    })
+
 screen = pygame.display.set_mode((displayWidth, displayHeight))
 pygame.display.set_caption("Doctor Who Space Invasion")
 clock = pygame.time.Clock()
