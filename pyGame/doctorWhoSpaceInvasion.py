@@ -12,6 +12,8 @@ import pygame
 import sys
 import random
 import os
+from startScreen import drawStartScreen
+from gameOverScreen import drawGameOverScreen
 
 # ============================================================================
 # INITIALISATION
@@ -279,6 +281,10 @@ score = 0
 lives = 3  # Number of lives the player starts with
 font = pygame.font.Font(None, 36)
 
+# Game state
+gameState = "start"  # Possible values: "start", "playing", "gameover"
+victory = False  # Track if player won or lost
+
 # Defender types dictionary - defines properties for each defender type
 defenderTypes = {
     "K9": {
@@ -339,7 +345,7 @@ barrierTypes = {
 
 # Invader grid configuration
 invaderRows = 3
-invaderColumns = 10
+invaderColumns = 6
 invaderSpacing = 65  # Horizontal spacing between invaders
 invaderStartX = 100  # Starting x position for grid
 invaderStartY = 50   # Starting y position for grid
@@ -575,6 +581,77 @@ def respawnDefender():
     defenderLasers.clear()
     invaderLasers.clear()
 
+def resetGame():
+    """Reset all game state for a new game
+
+    Called when restarting after game over. Reinitialises all game objects,
+    score, lives, and invader movement.
+    """
+    global score, lives, victory, defender, defenderLasers, invaders, invaderLasers, barriers, invaderDirection
+
+    # Reset score and lives
+    score = 0
+    lives = 3
+    victory = False
+
+    # Reset defender
+    chosenDefender = random.choice(list(defenderTypes.keys()))
+    defenderConfig = defenderTypes[chosenDefender]
+    defender = Defender(
+        name = chosenDefender,
+        x = displayWidth // 2 - defenderConfig["width"] // 2,
+        y = displayHeight - 80,
+        spriteFile = defenderConfig["spriteFile"],
+        laserColour = defenderConfig["laserColour"],
+        laserSpeed = defenderConfig["laserSpeed"],
+        laserWidth = defenderConfig["laserWidth"],
+        laserHeight = defenderConfig["laserHeight"],
+        width = defenderConfig["width"],
+        speed = defenderConfig["speed"]
+    )
+    defenderLasers = []
+
+    # Reset invaders
+    invaders = []
+    for row in range(invaderRows):
+        for column in range(invaderColumns):
+            invaderX = invaderStartX + (column * invaderSpacing)
+            invaderY = invaderStartY + (row * 80)
+            chosenInvader = random.choice(list(invaderTypes.keys()))
+            invaderConfig = invaderTypes[chosenInvader]
+            invader = Invader(
+                name = chosenInvader,
+                x = invaderX,
+                y = invaderY,
+                spriteFile = invaderConfig["spriteFile"],
+                laserColour = invaderConfig["laserColour"],
+                laserSpeed = invaderConfig["laserSpeed"],
+                laserWidth = invaderConfig["laserWidth"],
+                laserHeight = invaderConfig["laserHeight"],
+                scoreValue = invaderConfig["scoreValue"],
+                width = invaderConfig["width"],
+                height = invaderConfig["height"]
+            )
+            invaders.append(invader)
+    invaderLasers = []
+    invaderDirection = 1
+
+    # Reset barriers
+    barriers = []
+    for i in range(4):
+        chosenBarrier = random.choice(list(barrierTypes.keys()))
+        barrierConfig = barrierTypes[chosenBarrier]
+        barrierX = 100 + (i * barrierSpacing)
+        barrier = Barrier(
+            name = chosenBarrier,
+            x = barrierX,
+            y = barrierY,
+            spriteFile = barrierConfig["spriteFile"],
+            width = barrierConfig["width"],
+            height = barrierConfig["height"]
+        )
+        barriers.append(barrier)
+
 # ============================================================================
 # MAIN GAME LOOP
 # ============================================================================
@@ -591,144 +668,169 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            # Handle key presses
-            if event.key == pygame.K_LEFT:
-                defender.moveLeft = True
-            elif event.key == pygame.K_RIGHT:
-                defender.moveRight = True
-            elif event.key == pygame.K_SPACE:
-                # Fire defender laser
-                laserX, laserY = defender.getLaserStart()
+            # Handle start screen
+            if gameState == "start":
+                if event.key == pygame.K_SPACE:
+                    gameState = "playing"
+            # Handle game over screen
+            elif gameState == "gameover":
+                if event.key == pygame.K_SPACE:
+                    # Restart game - reset all game state
+                    resetGame()
+                    gameState = "playing"
+                elif event.key == pygame.K_ESCAPE:
+                    running = False
+            # Handle gameplay
+            elif gameState == "playing":
+                # Handle key presses
+                if event.key == pygame.K_LEFT:
+                    defender.moveLeft = True
+                elif event.key == pygame.K_RIGHT:
+                    defender.moveRight = True
+                elif event.key == pygame.K_SPACE:
+                    # Fire defender laser
+                    laserX, laserY = defender.getLaserStart()
+                    laser = Laser(
+                        x=laserX,
+                        y=laserY,
+                        speed=defender.laserSpeed,
+                        colour=defender.laserColour,
+                        width=defender.laserWidth,
+                        height=defender.laserHeight
+                    )
+                    defenderLasers.append(laser)
+        elif event.type == pygame.KEYUP:
+            # Handle key releases (only during gameplay)
+            if gameState == "playing":
+                if event.key == pygame.K_LEFT:
+                    defender.moveLeft = False
+                elif event.key == pygame.K_RIGHT:
+                    defender.moveRight = False
+
+    # Game logic - only run during gameplay
+    if gameState == "playing":
+        # Update game state - movement
+        defender.move(displayWidth)
+        moveInvaders()
+
+        # Move defender lasers
+        for laser in defenderLasers:
+            laser.move()
+
+        # Remove defender lasers that have gone off screen
+        lasersToRemove = []
+        for laser in defenderLasers:
+            if laser.isOffScreen(displayHeight):
+                lasersToRemove.append(laser)
+
+        for laser in lasersToRemove:
+            defenderLasers.remove(laser)
+
+        # Invaders randomly fire lasers
+        # Adjust fire rate based on remaining invaders to maintain consistent laser frequency
+        if len(invaders) > 0:
+            adjustedFireRate = invaderFireRate * (totalInvaders / len(invaders))
+            adjustedFireRate = min(adjustedFireRate, 0.3)  # Cap at 50% chance per invader per frame
+        else:
+            adjustedFireRate = invaderFireRate
+
+        for invader in invaders:
+            if random.random() < adjustedFireRate:
+                laserX = invader.x + invader.width // 2
+                laserY = invader.y + invader.height
                 laser = Laser(
                     x=laserX,
                     y=laserY,
-                    speed=defender.laserSpeed,
-                    colour=defender.laserColour,
-                    width=defender.laserWidth,
-                    height=defender.laserHeight
+                    speed=invader.laserSpeed,
+                    colour=invader.laserColour,
+                    width=invader.laserWidth,
+                    height=invader.laserHeight
                 )
-                defenderLasers.append(laser)
-        elif event.type == pygame.KEYUP:
-            # Handle key releases
-            if event.key == pygame.K_LEFT:
-                defender.moveLeft = False
-            elif event.key == pygame.K_RIGHT:
-                defender.moveRight = False
+                invaderLasers.append(laser)
 
-    # Update game state - movement
-    defender.move(displayWidth)
-    moveInvaders()
+        # Move invader lasers
+        for laser in invaderLasers:
+            laser.move()
 
-    # Move defender lasers
-    for laser in defenderLasers:
-        laser.move()
+        # Remove invader lasers that have gone off screen
+        lasersToRemove = []
+        for laser in invaderLasers:
+            if laser.isOffScreen(displayHeight):
+                lasersToRemove.append(laser)
 
-    # Remove defender lasers that have gone off screen
-    lasersToRemove = []
-    for laser in defenderLasers:
-        if laser.isOffScreen(displayHeight):
-            lasersToRemove.append(laser)
+        for laser in lasersToRemove:
+            invaderLasers.remove(laser)
 
-    for laser in lasersToRemove:
-        defenderLasers.remove(laser)
+        # Collision detection
+        checkDefenderLaserCollisions()
 
-    # Invaders randomly fire lasers
-    # Adjust fire rate based on remaining invaders to maintain consistent laser frequency
-    if len(invaders) > 0:
-        adjustedFireRate = invaderFireRate * (totalInvaders / len(invaders))
-        adjustedFireRate = min(adjustedFireRate, 0.3)  # Cap at 50% chance per invader per frame
-    else:
-        adjustedFireRate = invaderFireRate
+        # Check if defender was hit by invader laser
+        laserResult = checkInvaderLaserCollisions()
+        if laserResult == "defender hit":
+            lives -= 1
+            print(f"Defender hit by invader laser! Lives remaining: {lives}")
+            if lives > 0:
+                respawnDefender()
+            else:
+                print(f"Game Over! Final Score: {score}")
+                victory = False
+                gameState = "gameover"
+            continue
 
-    for invader in invaders:
-        if random.random() < adjustedFireRate:
-            laserX = invader.x + invader.width // 2
-            laserY = invader.y + invader.height
-            laser = Laser(
-                x=laserX,
-                y=laserY,
-                speed=invader.laserSpeed,
-                colour=invader.laserColour,
-                width=invader.laserWidth,
-                height=invader.laserHeight
-            )
-            invaderLasers.append(laser)
+        # Check if defender was hit by invader
+        invaderResult = checkInvaderCollisions()
+        if invaderResult == "defender hit":
+            lives -= 1
+            print(f"Defender hit by invader! Lives remaining: {lives}")
+            if lives > 0:
+                respawnDefender()
+            else:
+                print(f"Game Over! Final Score: {score}")
+                victory = False
+                gameState = "gameover"
+            continue
 
-    # Move invader lasers
-    for laser in invaderLasers:
-        laser.move()
+        # Check for victory condition
+        if checkVictory():
+            print(f"Victory! All invaders destroyed! Final Score: {score}")
+            victory = True
+            gameState = "gameover"
+            continue
 
-    # Remove invader lasers that have gone off screen
-    lasersToRemove = []
-    for laser in invaderLasers:
-        if laser.isOffScreen(displayHeight):
-            lasersToRemove.append(laser)
+    # Rendering - draw based on game state
+    if gameState == "start":
+        drawStartScreen(screen, displayWidth, displayHeight, backgroundStars, invaderTypes, gameDirectory)
+    elif gameState == "playing":
+        screen.fill(black)
 
-    for laser in lasersToRemove:
-        invaderLasers.remove(laser)
+        # Draw starfield background
+        for star in backgroundStars:
+            starColour = (star['brightness'], star['brightness'], star['brightness'])
+            pygame.draw.circle(screen, starColour, (star['x'], star['y']), star['size'])
 
-    # Collision detection
-    checkDefenderLaserCollisions()
+        # Draw game objects
+        defender.draw(screen)
 
-    # Check if defender was hit by invader laser
-    laserResult = checkInvaderLaserCollisions()
-    if laserResult == "defender hit":
-        lives -= 1
-        print(f"Defender hit by invader laser! Lives remaining: {lives}")
-        if lives > 0:
-            respawnDefender()
-        else:
-            print(f"Game Over! Final Score: {score}")
-            running = False
-        continue
+        for invader in invaders:
+            invader.draw(screen)
 
-    # Check if defender was hit by invader
-    invaderResult = checkInvaderCollisions()
-    if invaderResult == "defender hit":
-        lives -= 1
-        print(f"Defender hit by invader! Lives remaining: {lives}")
-        if lives > 0:
-            respawnDefender()
-        else:
-            print(f"Game Over! Final Score: {score}")
-            running = False
-        continue
+        for laser in defenderLasers:
+            laser.draw(screen)
 
-    # Check for victory condition
-    if checkVictory():
-        print(f"Victory! All invaders destroyed! Final Score: {score}")
-        running = False
-        continue
+        for laser in invaderLasers:
+            laser.draw(screen)
 
-    # Rendering - draw everything to screen
-    screen.fill(black)
+        for barrier in barriers:
+            barrier.draw(screen)
 
-    # Draw starfield background
-    for star in backgroundStars:
-        starColour = (star['brightness'], star['brightness'], star['brightness'])
-        pygame.draw.circle(screen, starColour, (star['x'], star['y']), star['size'])
+        # Draw score and lives
+        scoreText = font.render(f"Score: {score}", True, white)
+        screen.blit(scoreText, (10, 10))
 
-    # Draw game objects
-    defender.draw(screen)
-
-    for invader in invaders:
-        invader.draw(screen)
-
-    for laser in defenderLasers:
-        laser.draw(screen)
-
-    for laser in invaderLasers:
-        laser.draw(screen)
-
-    for barrier in barriers:
-        barrier.draw(screen)
-
-    # Draw score and lives
-    scoreText = font.render(f"Score: {score}", True, white)
-    screen.blit(scoreText, (10, 10))
-
-    livesText = font.render(f"Lives: {lives}", True, white)
-    screen.blit(livesText, (displayWidth - 150, 10))
+        livesText = font.render(f"Lives: {lives}", True, white)
+        screen.blit(livesText, (displayWidth - 150, 10))
+    elif gameState == "gameover":
+        drawGameOverScreen(screen, displayWidth, displayHeight, backgroundStars, score, victory)
 
     # Update display and maintain frame rate
     pygame.display.flip()
