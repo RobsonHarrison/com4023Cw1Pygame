@@ -6,32 +6,7 @@ Displays the start screen with game title, instructions, and invader information
 
 import pygame
 import os
-import random
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def animateStars(backgroundStars, displayWidth, displayHeight):
-    """Animate the starfield background by making stars twinkle and drift
-
-    Args:
-        backgroundStars: List of star dictionaries to animate
-        displayWidth: Width of the display
-        displayHeight: Height of the display
-    """
-    for star in backgroundStars:
-        # Random chance to change brightness (twinkling effect)
-        if random.random() < 0.05:  # 5% chance per frame
-            star['brightness'] = random.randint(100, 255)
-
-        # Slowly drift stars downwards
-        star['y'] += star['size'] * 0.2
-
-        # Wrap stars around when they go off screen
-        if star['y'] > displayHeight:
-            star['y'] = 0
-            star['x'] = random.randint(0, displayWidth)
+from background import animateStars, drawStars
 
 # ============================================================================
 # SCREEN RENDERING
@@ -60,9 +35,7 @@ def drawStartScreen(screen, displayWidth, displayHeight, backgroundStars, invade
 
     # Animate and draw starfield background
     animateStars(backgroundStars, displayWidth, displayHeight)
-    for star in backgroundStars:
-        starColour = (star['brightness'], star['brightness'], star['brightness'])
-        pygame.draw.circle(screen, starColour, (int(star['x']), int(star['y'])), star['size'])
+    drawStars(screen, backgroundStars)
 
     # Load and draw game logo
     logoPath = os.path.join(gameDirectory, "assets/gameLogo.png")

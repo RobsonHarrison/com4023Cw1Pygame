@@ -14,6 +14,7 @@ import random
 import os
 from startScreen import drawStartScreen
 from gameOverScreen import drawGameOverScreen
+from background import animateStars, drawStars
 
 # ============================================================================
 # INITIALISATION
@@ -803,10 +804,9 @@ while running:
     elif gameState == "playing":
         screen.fill(black)
 
-        # Draw starfield background
-        for star in backgroundStars:
-            starColour = (star['brightness'], star['brightness'], star['brightness'])
-            pygame.draw.circle(screen, starColour, (star['x'], star['y']), star['size'])
+        # Animate and draw starfield background
+        animateStars(backgroundStars, displayWidth, displayHeight)
+        drawStars(screen, backgroundStars)
 
         # Draw game objects
         defender.draw(screen)
