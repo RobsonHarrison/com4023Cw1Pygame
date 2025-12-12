@@ -33,6 +33,11 @@ For detailed information, please visit the **[Wiki](https://github.com/RobsonHar
 - **[Game Architecture](https://github.com/RobsonHarrison/com4023Cw1Pygame/wiki/Game-Architecture)** - Technical architecture and design patterns
 - **[Sources and Credits](https://github.com/RobsonHarrison/com4023Cw1Pygame/wiki/Sources-and-Credits)** - Attribution for libraries and assets
 
+### Assignment Documentation
+
+- **[Assignment Presentation](documentation/com4023ProgrammingConceptsCw1AssignmentPresentation.pptx)** - Project presentation slides
+- **[Assignment Brief](documentation/com4023Cw1AssignmentBrief2025-26.pdf)** - Original assignment requirements
+
 ---
 
 ## Project Structure
